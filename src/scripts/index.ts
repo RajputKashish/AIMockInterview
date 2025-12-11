@@ -49,11 +49,12 @@ export const sendMessageWithRetry = async (message: string, maxRetries = 3) => {
     try {
       const result = await chatSession.sendMessage(message);
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.log(`Attempt ${attempt} failed:`, error);
       
       // Check if it's a rate limit error (429)
-      if (error.status === 429 || error.message?.includes('429')) {
+      const errorObj = error as { status?: number; message?: string };
+      if (errorObj.status === 429 || errorObj.message?.includes('429')) {
         if (attempt < maxRetries) {
           // Exponential backoff: wait 2^attempt seconds
           const waitTime = Math.pow(2, attempt) * 1000;

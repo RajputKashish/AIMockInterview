@@ -44,31 +44,57 @@ export const DemoVoiceInterview = ({
   const [isProcessing, setIsProcessing] = useState(false);
 
   const speechSynthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const speechRecognitionRef = useRef<any>(null);
+  const speechRecognitionRef = useRef<SpeechRecognition | null>(null);
   const currentQuestionIndexRef = useRef<number>(0);
   const { userId } = useAuth();
 
+  const cleanupSpeechRecognition = () => {
+    setIsRecording(false);
+    setIsWaitingForSpeech(false);
+    
+    if (speechTimeout) {
+      clearTimeout(speechTimeout);
+      setSpeechTimeout(null);
+    }
+  };
+
+  const cleanupAll = () => {
+    if (speechSynthesisRef.current) {
+      speechSynthesis.cancel();
+    }
+    if (speechRecognitionRef.current) {
+      speechRecognitionRef.current.stop();
+    }
+    if (speechTimeout) {
+      clearTimeout(speechTimeout);
+    }
+  };
+
   // Initialize speech recognition
   useEffect(() => {
+    const handleUserResponseCallback = (transcript: string) => {
+      handleUserResponse(transcript);
+    };
+
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-      speechRecognitionRef.current = new SpeechRecognition();
+      const SpeechRecognitionConstructor = (window as Window & { webkitSpeechRecognition?: typeof SpeechRecognition }).webkitSpeechRecognition || window.SpeechRecognition;
+      speechRecognitionRef.current = new SpeechRecognitionConstructor();
       speechRecognitionRef.current.continuous = false;
       speechRecognitionRef.current.interimResults = false;
       speechRecognitionRef.current.lang = 'en-US';
       speechRecognitionRef.current.maxAlternatives = 1;
 
-      speechRecognitionRef.current.onresult = (event: any) => {
+      speechRecognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
         const transcript = event.results[0][0].transcript;
         console.log('Speech recognized:', transcript);
         
         // Clear timeout and reset states
         cleanupSpeechRecognition();
         
-        handleUserResponse(transcript);
+        handleUserResponseCallback(transcript);
       };
 
-      speechRecognitionRef.current.onerror = (event: any) => {
+      speechRecognitionRef.current.onerror = (event: SpeechRecognitionErrorEvent) => {
         console.error('Speech recognition error:', event.error);
         
         // Clean up immediately
@@ -92,29 +118,8 @@ export const DemoVoiceInterview = ({
     return () => {
       cleanupAll();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const cleanupSpeechRecognition = () => {
-    setIsRecording(false);
-    setIsWaitingForSpeech(false);
-    
-    if (speechTimeout) {
-      clearTimeout(speechTimeout);
-      setSpeechTimeout(null);
-    }
-  };
-
-  const cleanupAll = () => {
-    if (speechSynthesisRef.current) {
-      speechSynthesis.cancel();
-    }
-    if (speechRecognitionRef.current) {
-      speechRecognitionRef.current.stop();
-    }
-    if (speechTimeout) {
-      clearTimeout(speechTimeout);
-    }
-  };
 
   const speakText = (text: string) => {
     return new Promise<void>((resolve) => {

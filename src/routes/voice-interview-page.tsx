@@ -102,11 +102,12 @@ const generateAIQuestions = async (interview: Interview, setApiLimitExceeded?: (
     
     console.log("🎉 Successfully generated", validQuestions.length, "AI questions");
     return validQuestions;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("💥 Error generating AI questions:", error);
     
     // Check if it's an API limit error
-    if (error?.message?.includes('429') || error?.message?.includes('quota') || error?.message?.includes('Too Many Requests')) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.includes('429') || errorMessage.includes('quota') || errorMessage.includes('Too Many Requests')) {
       console.log("🚫 API limit exceeded, using fallback questions");
       if (setApiLimitExceeded) {
         setApiLimitExceeded(true);

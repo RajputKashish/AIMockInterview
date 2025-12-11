@@ -34,7 +34,7 @@ const getUniqueInterviewId = (interviewId: string, userId: string): string => {
     const sessionKey = `interview_session_${interviewId}_${userId}`;
     
     // Try to get existing session ID from localStorage
-    let sessionId = localStorage.getItem(sessionKey);
+    const sessionId = localStorage.getItem(sessionKey);
     
     // If no session exists, this might be an old session, try to find answers with any session ID
     if (!sessionId) {
