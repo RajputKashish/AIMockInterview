@@ -1,0 +1,18 @@
+<svg id="favicon-ico" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Simplified version for ICO -->
+  <circle cx="8" cy="8" r="7.5" fill="#3B82F6" stroke="#1E40AF" stroke-width="0.5"/>
+  
+  <!-- Simple microphone -->
+  <g transform="translate(8, 8)">
+    <!-- Mic body -->
+    <rect x="-1" y="-3" width="2" height="4" rx="1" fill="#ffffff"/>
+    <!-- Mic stand -->
+    <rect x="-0.25" y="1" width="0.5" height="2" fill="#ffffff"/>
+    <!-- Mic base -->
+    <ellipse cx="0" cy="3.5" rx="1.5" ry="0.5" fill="#ffffff"/>
+    
+    <!-- Simple sound waves -->
+    <path d="M-3 -1 Q-4 0 -3 1" stroke="#ffffff" stroke-width="0.5" fill="none"/>
+    <path d="M3 -1 Q4 0 3 1" stroke="#ffffff" stroke-width="0.5" fill="none"/>
+  </g>
+</svg>
