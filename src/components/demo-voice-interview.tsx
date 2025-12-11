@@ -18,6 +18,59 @@ import {
 import { db } from "@/config/firebase.config";
 import { sendMessageWithRetry } from "@/scripts";
 
+// Web Speech API type declarations
+interface SpeechRecognitionResult {
+  readonly isFinal: boolean;
+  readonly length: number;
+  item(index: number): SpeechRecognitionAlternative;
+  [index: number]: SpeechRecognitionAlternative;
+}
+
+interface SpeechRecognitionAlternative {
+  readonly transcript: string;
+  readonly confidence: number;
+}
+
+interface SpeechRecognitionResultList {
+  readonly length: number;
+  item(index: number): SpeechRecognitionResult;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionEventType extends Event {
+  readonly resultIndex: number;
+  readonly results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEventType extends Event {
+  readonly error: string;
+  readonly message: string;
+}
+
+interface SpeechRecognitionType extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  maxAlternatives: number;
+  onresult: ((event: SpeechRecognitionEventType) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEventType) => void) | null;
+  onend: (() => void) | null;
+  start(): void;
+  stop(): void;
+  abort(): void;
+}
+
+interface SpeechRecognitionConstructor {
+  new (): SpeechRecognitionType;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  }
+}
+
 interface DemoVoiceInterviewProps {
   interview: Interview;
   questions: Array<{ question: string; answer: string }>;
@@ -44,7 +97,7 @@ export const DemoVoiceInterview = ({
   const [isProcessing, setIsProcessing] = useState(false);
 
   const speechSynthesisRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const speechRecognitionRef = useRef<SpeechRecognition | null>(null);
+  const speechRecognitionRef = useRef<SpeechRecognitionType | null>(null);
   const currentQuestionIndexRef = useRef<number>(0);
   const { userId } = useAuth();
 
@@ -77,42 +130,44 @@ export const DemoVoiceInterview = ({
     };
 
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognitionConstructor = (window as Window & { webkitSpeechRecognition?: typeof SpeechRecognition }).webkitSpeechRecognition || window.SpeechRecognition;
-      speechRecognitionRef.current = new SpeechRecognitionConstructor();
-      speechRecognitionRef.current.continuous = false;
-      speechRecognitionRef.current.interimResults = false;
-      speechRecognitionRef.current.lang = 'en-US';
-      speechRecognitionRef.current.maxAlternatives = 1;
+      const SpeechRecognitionAPI = window.webkitSpeechRecognition || window.SpeechRecognition;
+      if (SpeechRecognitionAPI) {
+        speechRecognitionRef.current = new SpeechRecognitionAPI();
+        speechRecognitionRef.current.continuous = false;
+        speechRecognitionRef.current.interimResults = false;
+        speechRecognitionRef.current.lang = 'en-US';
+        speechRecognitionRef.current.maxAlternatives = 1;
 
-      speechRecognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
-        const transcript = event.results[0][0].transcript;
-        console.log('Speech recognized:', transcript);
-        
-        // Clear timeout and reset states
-        cleanupSpeechRecognition();
-        
-        handleUserResponseCallback(transcript);
-      };
+        speechRecognitionRef.current.onresult = (event: SpeechRecognitionEventType) => {
+          const transcript = event.results[0][0].transcript;
+          console.log('Speech recognized:', transcript);
+          
+          // Clear timeout and reset states
+          cleanupSpeechRecognition();
+          
+          handleUserResponseCallback(transcript);
+        };
 
-      speechRecognitionRef.current.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error('Speech recognition error:', event.error);
-        
-        // Clean up immediately
-        cleanupSpeechRecognition();
-        
-        // Only show error message for specific cases, don't auto-retry
-        if (event.error === 'not-allowed') {
-          alert('Microphone access is required for the voice interview. Please allow microphone access and try again.');
-        } else {
-          console.log('Speech recognition failed, user can try again manually');
-        }
-      };
+        speechRecognitionRef.current.onerror = (event: SpeechRecognitionErrorEventType) => {
+          console.error('Speech recognition error:', event.error);
+          
+          // Clean up immediately
+          cleanupSpeechRecognition();
+          
+          // Only show error message for specific cases, don't auto-retry
+          if (event.error === 'not-allowed') {
+            alert('Microphone access is required for the voice interview. Please allow microphone access and try again.');
+          } else {
+            console.log('Speech recognition failed, user can try again manually');
+          }
+        };
 
-      speechRecognitionRef.current.onend = () => {
-        console.log('Speech recognition ended');
-        setIsRecording(false);
-        setIsWaitingForSpeech(false);
-      };
+        speechRecognitionRef.current.onend = () => {
+          console.log('Speech recognition ended');
+          setIsRecording(false);
+          setIsWaitingForSpeech(false);
+        };
+      }
     }
 
     return () => {
